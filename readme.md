@@ -45,7 +45,7 @@ If you prefer not to use Git or GitHub, you can **always email or contact us** (
 
 ## 🎅 So You Think You Can Code? Schedule
 
-*(This table will be updated as slots are claimed and Pull Requests are merged. Check the [Issues Tab](link-to-issues-here) for the most current availability!)*
+*(This table will be updated as slots are claimed and Pull Requests are merged. Check the [Issues Tab](https://github.com/MagnusThor/so-you-think-you-can-code-2025/issues)  for the most current availability!)*
 
 | Date| Author | Topic | Status |
 | :--- | :--- | :--- | :--- |
