@@ -49,31 +49,31 @@ If you prefer not to use Git or GitHub, you can **always email or contact us** (
 
 | Date| Author | Topic | Status |
 | :--- | :--- | :--- | :--- |
-| **December 1** | TBA| TBA | 🔒 Unclaimed |
-| **December 2** | TBA| TBA | 🔒 Unclaimed |
-| **December 3** | TBA| TBA | 🔒 Unclaimed |
-| **December 4** | TBA| TBA | 🔒 Unclaimed |
-| **December 5** | TBA| TBA | 🔒 Unclaimed |
-| **December 6** | TBA| TBA | 🔒 Unclaimed |
-| **December 7** | TBA| TBA | 🔒 Unclaimed |
-| **December 8** | TBA| TBA | 🔒 Unclaimed |
-| **December 9** | TBA| TBA | 🔒 Unclaimed |
-| **December 10** | TBA| TBA | 🔒 Unclaimed |
-| **December 11** | TBA| TBA | 🔒 Unclaimed |
-| **December 12** | TBA| TBA | 🔒 Unclaimed |
-| **December 13** | TBA| TBA | 🔒 Unclaimed |
-| **December 14** | TBA| TBA | 🔒 Unclaimed |
-| **December 15** | TBA| TBA | 🔒 Unclaimed |
-| **December 16** | TBA| TBA | 🔒 Unclaimed |
-| **December 17** | TBA| TBA | 🔒 Unclaimed |
-| **December 18** | TBA| TBA | 🔒 Unclaimed |
-| **December 19** | TBA| TBA | 🔒 Unclaimed |
-| **December 20** | TBA| TBA | 🔒 Unclaimed |
-| **December 21** | TBA| TBA | 🔒 Unclaimed |
-| **December 22** | TBA| TBA | 🔒 Unclaimed |
-| **December 23** | TBA| TBA | 🔒 Unclaimed |
-| **December 24** | TBA| TBA | 🔒 Unclaimed |
-| **December 25** | TBA| TBA | 🔒 Unclaimed |
+| **December 1** | Magnus Thor| Array Superpowers: Mastering Fluent LINQ in TypeScript | 🔒 Claimed |
+| **December 2** | TBA| TBA | 🚪 Unclaimed |
+| **December 3** | TBA| TBA | 🚪 Unclaimed |
+| **December 4** | TBA| TBA | 🚪 Unclaimed |
+| **December 5** | TBA| TBA | 🚪 Unclaimed |
+| **December 6** | TBA| TBA | 🚪 Unclaimed |
+| **December 7** | TBA| TBA | 🚪 Unclaimed |
+| **December 8** | TBA| TBA | 🚪 Unclaimed |
+| **December 9** | TBA| TBA | 🚪 Unclaimed |
+| **December 10** | TBA| TBA | 🚪 Unclaimed |
+| **December 11** | TBA| TBA | 🚪 Unclaimed |
+| **December 12** | TBA| TBA | 🚪 Unclaimed |
+| **December 13** | TBA| TBA | 🚪 Unclaimed |
+| **December 14** | TBA| TBA | 🚪 Unclaimed |
+| **December 15** | TBA| TBA | 🚪 Unclaimed |
+| **December 16** | TBA| TBA | 🚪 Unclaimed |
+| **December 17** | TBA| TBA | 🚪 Unclaimed |
+| **December 18** | TBA| TBA | 🚪 Unclaimed |
+| **December 19** | TBA| TBA | 🚪 Unclaimed |
+| **December 20** | TBA| TBA | 🚪 Unclaimed |
+| **December 21** | TBA| TBA | 🚪 Unclaimed |
+| **December 22** | TBA| TBA | 🚪 Unclaimed |
+| **December 23** | TBA| TBA | 🚪 Unclaimed |
+| **December 24** | TBA| TBA | 🚪 Unclaimed |
+| **December 25** | TBA| TBA | 🚪 Unclaimed |
 
 ---
 ---
