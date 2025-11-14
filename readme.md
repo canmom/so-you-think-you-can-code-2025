@@ -54,7 +54,7 @@ If you prefer not to use Git or GitHub, you can **always email or contact us** (
 | **December 3** | TBA| TBA | 🚪 Unclaimed |
 | **December 4** | TBA| TBA | 🚪 Unclaimed |
 | **December 5** | TBA| TBA | 🚪 Unclaimed |
-| **December 6** | TBA| TBA | 🚪 Unclaimed |
+| **December 6** | [Shoofle](https://github.com/shoofle) | An Asynchronous Assembly Article | 🔒 Claimed |
 | **December 7** | TBA| TBA | 🚪 Unclaimed |
 | **December 8** | TBA| TBA | 🚪 Unclaimed |
 | **December 9** | TBA| TBA | 🚪 Unclaimed |
@@ -68,7 +68,7 @@ If you prefer not to use Git or GitHub, you can **always email or contact us** (
 | **December 17** | TBA| TBA | 🚪 Unclaimed |
 | **December 18** | TBA| TBA | 🚪 Unclaimed |
 | **December 19** | TBA| TBA | 🚪 Unclaimed |
-| **December 20** | [canmom](https://github.com/canmom)| Will likely involve shader programming and/or Rust. | 🔒 Claimed |
+| **December 20** | [canmom](https://github.com/canmom)| A Nest of Divergence-Free Fields | 🔒 Claimed |
 | **December 21** | Frank Taylor | Markov Melody Machine | 🔒 Claimed |
 | **December 22** | TBA| TBA | 🚪 Unclaimed |
 | **December 23** | TBA| TBA | 🚪 Unclaimed |
