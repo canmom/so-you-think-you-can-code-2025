@@ -66,7 +66,7 @@ If you prefer not to use Git or GitHub, you can **always email or contact us** (
 | **December 15** | Magnus Thor | Fractal Horizons: Creating Infinite Geometry in Lua/Roblox | 🔒 Claimed |
 | **December 16** | TBA| TBA | 🚪 Unclaimed |
 | **December 17** | TBA| TBA | 🚪 Unclaimed |
-| **December 18** | TBA| TBA | 🚪 Unclaimed |
+| **December 18** | Starfighter | ​The Recursive Swedish Sphere Algorithm | 🔒 Claimed |
 | **December 19** | TBA| TBA | 🚪 Unclaimed |
 | **December 20** | [canmom](https://github.com/canmom)| A Nest of Divergence-Free Fields | 🔒 Claimed |
 | **December 21** | Frank Taylor | Markov Melody Machine | 🔒 Claimed |
