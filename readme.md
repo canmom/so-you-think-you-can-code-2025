@@ -50,9 +50,9 @@ If you prefer not to use Git or GitHub, you can **always email or contact us** (
 | Date| Author | Topic | Status |
 | :--- | :--- | :--- | :--- |
 | **December 1** | Magnus Thor| Array Superpowers: Mastering Fluent LINQ in TypeScript | 🔒 Claimed |
-| **December 2** | TBA| TBA | 🚪 Unclaimed |
-| **December 3** | TBA| TBA | 🚪 Unclaimed |
-| **December 4** | TBA| TBA | 🚪 Unclaimed |
+| **December 2** | Magnus Thor| The Grinch Who Stole Swizzle Write | 🚪 Claimed |
+| **December 3** | Magnus Thor | From Frame Rate to Nanoseconds: Precision Timing in WebGPU | 🔒 Claimed |
+| **December 4** | PCruch| TBA | 🔒 Claimed |
 | **December 5** | PCruch | When Every Byte Counts: Hashing, Golfing, and Packing for the Web | 🔒 Claimed |
 | **December 6** | [Shoofle](https://github.com/shoofle) | An Asynchronous Assembly Article | 🔒 Claimed |
 | **December 7** | TBA| TBA | 🚪 Unclaimed |
@@ -71,7 +71,7 @@ If you prefer not to use Git or GitHub, you can **always email or contact us** (
 | **December 20** | [canmom](https://github.com/canmom)| A Nest of Divergence-Free Fields | 🔒 Claimed |
 | **December 21** | Frank Taylor | Markov Melody Machine | 🔒 Claimed |
 | **December 22** | TBA| TBA | 🚪 Unclaimed |
-| **December 23** | TBA| TBA | 🚪 Unclaimed |
+| **December 23** | [Mårten 'mrange' Rånge](https://github.com/mrange/) | TBA | 🔒 Claimed |
 | **December 24** | TBA| TBA | 🚪 Unclaimed |
 | **December 25** | TBA| TBA | 🚪 Unclaimed |
 
