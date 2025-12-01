@@ -292,6 +292,7 @@ I'm going to adopt my own convention. When I talk about the stack, I'll try to r
 | `$B0DE`                                   |
 | `$1337`                                   |
 | \{ **stack ends here** }                  |
+
 In this diagram I've written in \[ brackets ] to suggest some amount of data *previously* pushed onto the stack, and in \{ **curly braces** } a placeholder to indicate the end of the stack, the location `sp` points to, where new data will be pushed to. Most of the time, though, the stack is used as a call stack. When you execute a `call Subroutine` instruction, the address of the next line gets pushed onto the stack, and the processor jumps to `Subroutine`. When you execute a `ret` instruction, that address gets popped off the stack, and the processor jumps to it. So the stack stores a record of all the locations in memory it should return to!
 
 So you have a stack pointer `sp` representing the end of a stack in memory. It holds data you put there, as well as the "call stack" featuring the locations successive `ret` instructions should return to. How does it interact with interrupts, though? Well, when an interrupt is handled, the processor effectively executes a `call InterruptHandler` instruction - it pushes the next address to execute onto the stack, and jumps to `InterruptHandler`. Then, when that code does a `ret`, it will restore computation from where we were before the interrupt.
