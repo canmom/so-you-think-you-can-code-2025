@@ -49,7 +49,7 @@ If you prefer not to use Git or GitHub, you can **always email or contact us** (
 
 | Date| Author | Topic | Status |
 | :--- | :--- | :--- | :--- |
-| **December 1** | Magnus Thor| Array Superpowers: Mastering Fluent LINQ in TypeScript | 🔒 Claimed |
+| **December 1** | Magnus Thor| [Array Superpowers: Mastering Fluent LINQ in TypeScript](day01/readme.md) | 🔒 Claimed |
 | **December 2** | Magnus Thor| The Grinch Who Stole Swizzle Write | 🚪 Claimed |
 | **December 3** | Magnus Thor | From Frame Rate to Nanoseconds: Precision Timing in WebGPU | 🔒 Claimed |
 | **December 4** | PCruch| TBA | 🔒 Claimed |
