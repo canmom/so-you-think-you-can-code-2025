@@ -1,5 +1,8 @@
 # 🎄✨🎉 So You Think You Can Code? - 2025 Advent Calendar 🎉✨🎄
 
+![A banner image reading "So You Think You Can Code? Advent Calendar 2025". A vintage computer rests indoors under holiday lights and a Sierpinski fractal Christmas tree decorated with Amiga Boing Ball ornaments.](https://repository-images.githubusercontent.com/1093389852/e147691b-0c00-42eb-be80-6c54f3a91a0a)
+*Artwork by [Finley Sinclaire](https://fsaudiovisual.carrd.co)*
+
 ## 🌐 About This Calendar
 
 Welcome, fellow digital architects, pixel tinkerers, and code wizards!
@@ -75,7 +78,6 @@ If you prefer not to use Git or GitHub, you can **always email or contact us** (
 | **December 24** | TBA| TBA | 🚪 Unclaimed |
 | **December 25** | TBA| TBA | 🚪 Unclaimed |
 
----
 ---
 
 ## 💖 Thank You
