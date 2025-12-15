@@ -66,7 +66,7 @@ If you prefer not to use Git or GitHub, you can **always email or contact us** (
 | **December 12** | Frank Taylor | [Node-RED Choreographing  Christmas Lights to Rhythmic Markov Melodies](day12/readme.md) | 🎅 Open  |
 | **December 13** | [Mårten 'mrange' Rånge](https://github.com/mrange/) | [Disassembling a Compact Glow-Tracer](day13/readme.md) | 🎅 Open |
 | **December 14** | Magnus Thor | [Building a Real-Time WGSL Shader Playground with WebGPU and WebRTC](day14/readme.md) | 🎅 Open |
-| **December 15** | PCruch | TBA | 🔒 Claimed |
+| **December 15** | PCruch | [AssemblyScript - Making WebAssembly Accessible for All](day15/readme.md) | 🎅 Open |
 | **December 16** | Magnus Thor  | Fractal Horizons: Creating Infinite Geometry in Lua/Roblox  | 🔒 Claimed |
 | **December 17** | Benni Dibb| Recreating a Hit Song on an 8-Bit Sound Chip | 🔒 Claimed |
 | **December 18** | Starfighter | ​The Recursive Swedish Sphere Algorithm | 🔒 Claimed |
