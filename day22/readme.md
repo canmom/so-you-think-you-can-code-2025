@@ -10,9 +10,17 @@ Have a look at this image.
 
 ![A spiraling shape made of white strands.](assets/uzumaki.png)
 
-That's pretty cool, isn't it? I made that in Blender in a few hours, using Geometry Nodes. And, I'll tell you this, I love Geometry Nodes. But I wanted to animate an effect like this in realtime, on the GPU, so that I could use it in demos and such-like things. In particular, I want these noodles in my game *<cite>Shaderland</cite>*!
+That's pretty cool, isn't it? Almost looks like something Junji Ito might draw. I made that in Blender in a few hours, using Geometry Nodes. And, I'll tell you this, I love Geometry Nodes. But I wanted to animate an effect like this in realtime, on the GPU, so that I could use it in demos and such-like things. In particular, I want these noodles in my game *<cite>Shaderland</cite>*!
 
 So what are we actually looking at? This is an example of integrating **curl noise**. It's a type of **vector field** which, crucially, has **zero divergence** everywhere (up to numerical precision, anyway).
+
+In the process, I'll be going through...
+
+- the concept of divergence-free fields
+- creating a simple cross-platform demo using Rust and wgpu
+- combining compute shaders with render pipelines
+
+I'm not going to be using any of the more modern styles of graphics programming here (indirect draw, mesh shaders, bindless, etc. etc.); ultimately we're going to be using wgpu in a very traditional way.
 
 ### A quick overview of the maths
 
@@ -163,17 +171,18 @@ With all the logging features and such, a basic 'clears the screen' wgpu applica
 
 So, we need to do two things here: a compute pipeline and a standard rendering pipeline. We'll start with the latter, since we'll have a hard time knowing if the compute pipeline is doing its job if we can't render the results.
 
-First, we need to figure out what data we'll be sending to the GPU. To begin with, our model segment will be made up of vertices. For a geometer, a vertex is a point in space. For a graphics programmer, a vertex is a struct. Here's what I'll be using today:
+First, we need to figure out what data we'll be sending to the GPU. To begin with, our model segment will be made up of vertices. For a geometer, a vertex is a point in space. For a graphics programmer, a vertex is a struct. So normally you might have, say, normals and colours and so on. However, today, it actually *is* just a position.
 
 ```rust
+use glam::Vec3;
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Zeroable, bytemuck::Pod)]
 pub struct Vertex {
-    pub position: glam::Vec3,
-    pub colour: glam::Vec3,
+    pub position: Vec3,
 }
 ```
-Nice and simple: six floats, 24 bytes. Why no normals? For the specific model we're using, we don't actually need them, they can be calculated from the position.
+Why no normals? For the specific model we're using, we don't actually need them, they can be calculated from the position in the vertex shader. And if we add colours, it will be per-instance, not per-vertex. There's no real need to create a wrapping type like this, this `Vertex` is byte for byte identical to `Vec3`, but I am doing it because most of the time you *do* have multiple things here and consistency is nice.
 
 We'll also need to tell wgpu how this struct is laid out, which involves creating an array of vertex attribute descriptors. There is a helper macro [`vertex_attr_array`](https://docs.rs/wgpu/latest/wgpu/macro.vertex_attr_array.html) to help here. I didn't know about that macro for months, so I was adding up all the offsets by hand. Don't be me...
 
@@ -184,7 +193,6 @@ impl Vertex {
         step_mode: wgpu::VertexStepMode::Vertex,
         attributes: &wgpu::vertex_attr_array![
             0 => Float32x3,
-            1 => Float32x3,
         ],
     };
 }
@@ -198,14 +206,15 @@ We define an instance like so:
 
 ```rust
 #[repr(C)]
-#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(Copy, Clone, Debug, bytemuck::Zeroable, bytemuck::Pod)]
 pub struct TubeInstance {
-    pub start_position: [f32; 3],
-    pub start_normal: [f32; 3],
-    pub start_bitangent: [f32; 3],
-    pub end_position: [f32; 3],
-    pub end_normal: [f32; 3],
-    pub end_bitangent: [f32; 3],
+    pub start_position: Vec3,
+    pub start_normal: Vec3,
+    pub start_bitangent: Vec3,
+    pub end_position: Vec3,
+    pub end_normal: Vec3,
+    pub end_bitangent: Vec3,
+    pub colour: Vec3,
     pub radius: f32,
 }
 ```
@@ -218,6 +227,7 @@ impl TubeInstance {
         array_stride: std::mem::size_of::<Self>() as wgpu::BufferAddress,
         step_mode: wgpu::VertexStepMode::Instance,
         attributes: &wgpu::vertex_attr_array![
+            1 => Float32x3,
             2 => Float32x3,
             3 => Float32x3,
             4 => Float32x3,
@@ -263,16 +273,16 @@ We will need to start by telling the vertex shader what to expect, and what to o
 ```wgsl
 struct VertexInput {
     @location(0) position: vec3<f32>,
-    @location(1) colour: vec3<f32>,
 }
 
 struct Instance {
-    @location(2) start_position: vec3<f32>,
-    @location(3) start_normal: vec3<f32>,
-    @location(4) start_bitangent: vec3<f32>,
-    @location(5) end_position: vec3<f32>,
-    @location(6) end_normal: vec3<f32>,
-    @location(7) end_bitangent: vec3<f32>,
+    @location(1) start_position: vec3<f32>,
+    @location(2) start_normal: vec3<f32>,
+    @location(3) start_bitangent: vec3<f32>,
+    @location(4) end_position: vec3<f32>,
+    @location(5) end_normal: vec3<f32>,
+    @location(6) end_bitangent: vec3<f32>,
+    @location(7) colour: vec3<f32>,
     @location(8) radius: f32,
 }
 
@@ -421,18 +431,34 @@ That leaves the uniforms.
 
 ## Putting on the uniform
 
-Let's first make a struct on the Rust side to store our uniforms. 
+Let's first make a struct on the Rust side to store our uniforms. Naively, we would want to do this...
+
+```rust
+//does not compile!
+#[repr(C)]
+#[derive(Debug, Copy, Clone, bytemuck::Zeroable, bytemuck::Pod)]
+struct Uniforms {
+    camera: Mat4,
+    light_direction: Vec3,
+    ambient: Vec3,
+}
+```
+But if you do this, you'll find a confusing problem: `Vec3` is aligned to 4 bytes, while `Mat4` is aligned to 16 bytes. If you don't pad this to fill up a 16 byte alignment, you can't mark it as `bytemuck::Pod` because Rust will quietly add hidden padding bytes which may be uninitialised... and that's a big no-no for casting ([it's categorically undefined behaviour](https://www.ralfj.de/blog/2019/07/14/uninit.html)).
+
+Even more confusingly, if you just add, say, a couple of floats at the end of the struct, there will be a misalignment between Rust's representation and wgsl's, since wgsl's vec3 type is 16-byte aligned. So we have to instead put the padding at the end of each vector...
 
 ```rust
 #[repr(C)]
-#[derive(Debug, Copy, Clone, bytemuck::AnyBitPattern)]
+#[derive(Debug, Copy, Clone, bytemuck::Zeroable, bytemuck::Pod)]
 struct Uniforms {
-    camera: glam::Mat4,
-    light_direction: glam::Vec3,
-    ambient: glam::Vec3,
+    camera: Mat4,
+    light_direction: Vec3,
+    _padding_1: u32,
+    ambient: Vec3,
+    _padding_2: u32,
 }
 ```
-This can't be `Pod` due to the padding brought in by the `glam` types, since the `Mat4` needs 16-byte alignment and the two `Vec3`s add up to 12 bytes between them. We could work around this by adding some padding floats, but actually it's fine for it to just have `AnyBitPattern`.
+There may be a way to avoid this kind of manual padding but I'm not sure what it is. (Of course, if we can think of a use of two floats worth of uniforms, we can 'fill in the gaps'.)
 
 Now we need to create the pipeline layout, and also the uniform buffer itself. First the buffer:
 
@@ -444,9 +470,11 @@ let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
     mapped_at_creation: false,
 });
 ```
-wgpu requires a 16-byte aligned size, and will get upset if it doesn't get it. In this case we are actually guaranteed that, but I always round the size to a multiple of 16 just in case.
+wgpu requires a 16-byte aligned size, and will get upset if it doesn't get it. In this case we are actually guaranteed that, but I always round the size to a multiple of 16 just in case. The compute shader won't be messing with this buffer.
 
-The pipeline layout tells the pipeline what resources such as uniform buffers, storage buffers, texture samplers and so forth to provide to the shaders. It is actually possible to derive this automatically from the shaders by passing `None` instead of a layout when creating the render pipeline. However, we will still need to create a bind group that matches the layout. Although we haven't finished creating the render pipeline yet, the way to do this will be like so...
+The pipeline layout field is mostly used to pass in a bind group layout, which tells the pipeline about the kinds of resources (such as uniform buffers, storage buffers, texture samplers and so forth) it can provide to the shaders. You can have multiple different bind groups with the same layout, and plug them into the same render pipeline.
+
+However, it is actually possible to derive the bind group layout automatically from the shaders by passing `None` instead of a layout when creating the render pipeline. Even with this shortcut, we'll need to create a bind group that matches the layout. Although we haven't finished creating the render pipeline yet, the way to do this will be like so...
 
 ```rust
 let bind_group_layout = render_pipeline.get_bind_group_layout(0);
@@ -462,13 +490,281 @@ let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
 ```
 The rest of the stuff going into the render pipeline is all pretty standard, we're mostly disabling stuff like multisampling for this render pipeline. (Later we might want to add MSAA, but for now, keeping it chunky.)
 
-### The camera matrix
+### Calculating the camera matrix
 
-The [perspective projection matrix](https://scratchapixel.com/lessons/3d-basic-rendering/perspective-and-orthographic-projection-matrix/opengl-perspective-projection-matrix.html). Don't we love it? It's the beautiful, magic gem at the heart of the temple of rasterisation.
-
-If you're not familiar with this beast, I highly recommend taking a look through Scratchapixel. Maybe you could try writing [a software rasteriser](https://canmom.art/programming/graphics/rasteriser/), like I did eight years ago... who could have known where that would lead.
+We're drawing in perspective, we need a perspective projection matrix. If you're not familiar, I recommend taking a look through [Scratchapixel](https://scratchapixel.com/lessons/3d-basic-rendering/perspective-and-orthographic-projection-matrix/).
 
 Since the vertex shader already handles the transformation from model space into world space for our spline segments, what we are calculating here is just the View-Projection matrix. We need to rotate everything into the space of our camera, project it to normalised device coordinates, and set up the z-divide.
 
-We could work through the maths of constructing a perspective projection matrix for our problem right here, or we can just [use `glam`](https://docs.rs/glam/latest/glam/f32/struct.Mat4.html#method.perspective_infinite_reverse_rh to do it].
+We could work through the maths of constructing a perspective projection matrix for our problem right here, or we can just [use `glam` to do it](https://docs.rs/glam/latest/glam/f32/struct.Mat4.html#method.perspective_infinite_reverse_rh).
 
+For the view matrix, for now we can just take a position and a target and use [`look_at`](https://docs.rs/glam/0.30.9/glam/f32/struct.Mat4.html#method.look_at_rh). (If you want to do this manually, you can calculate the basis vectors with cross products and normalisation.)
+
+Then we can multiply these two matrices together, applying view before perspective.
+
+```rust
+pub fn update_uniforms(
+    &self,
+    queue: &wgpu::Queue,
+    camera_pos: Vec3,
+    camera_target: Vec3,
+    aspect_ratio: f32,
+) {
+    let projection = Mat4::perspective_infinite_reverse_rh(PI / 6.0, aspect_ratio, 0.5);
+    let view = Mat4::look_at_rh(camera_pos, camera_target, vec3(0.0, 0.0, 1.0));
+    let new_uniforms = Uniforms {
+        camera: projection * view,
+        light_direction: vec3(-0.5, -0.2, 1.0).normalize(),
+        _padding_1: 0,
+        ambient: vec3(0.05, 0.05, 0.07),
+        _padding_2: 0,
+    };
+    queue.write_buffer(&self.uniform_buffer, 0, bytes_of(&new_uniforms));
+}
+```
+I've just picked some arbitrary values for lights for now. I'm using a right-handed z-up coordinate system similar to Blender, but ultimately if you want to use a different coordinate system orientation, it's as simple as switching the 'up' vector and if necessary using `_lh` variants of the `Mat4` constructor.
+
+## Creating the model
+
+We're almost at the point where we can render some tubes. We have the render pipeline, now we just need some buffers to render.
+
+To render a model, we normally generally need vertices and triangle indices. Since our model is so simple, we can generate these programmatically on the CPU.
+
+We're dealing with angles, so this is a great time to grab $\pi$ and $\tau$ from the standard library.
+
+```rust
+use std::f32::consts::{PI, TAU};
+```
+
+The vertices are simpler, so let's start here. We could mess around with iterator chains, but it's nicer to be able to create a fixed-size array and skip a heap allocation. So I write the vertices in pairs at alternating ends of the cylinder. Using `std::array::from_fn` lets us assign and initialise the array at the same time, similar to how in C you might allocate an uninitialised array and then write to it. (You can do that in Rust using `MaybeUninit` but you should almost never have to.)
+
+To feed it into the buffer at the same time we create it, we can include the extension trait `wgpu::util::DeviceExt` which adds a helpful method called `create_buffer_init`. This saves us having to calculate the size of the buffer.
+
+```rust
+const SIDES: usize = 8;
+const VERTICES: usize = 2 * Self::SIDES;
+
+fn create_cylinder(device: &wgpu::Device) -> wgpu::Buffer {
+    let vertices: [Vertex; Self::VERTICES] = std::array::from_fn(|i| {
+        let side = i / 2;
+        let end = i % 2;
+        let angle = TAU * (side as f32) / (Self::SIDES as f32);
+        Vertex {
+            position: Vec3 {
+                x: angle.cos(),
+                y: angle.sin(),
+                z: end as f32,
+            },
+        }
+    });
+    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Noodle vertex buffer"),
+        contents: bytemuck::cast_slice(&vertices),
+        usage: wgpu::BufferUsages::VERTEX,
+    })
+}
+```
+This way of ordering the vertices actually means our vertices are effectively already laid out as a triangle strip. So we can skip writing an index buffer altogether. Just make sure to set `topology: wgpu::PrimitiveTopology::TriangleStrip` in the `primitive` field on the render pipeline.
+
+## Creating an instance buffer
+
+Ultimately, the plan is to populate the instance buffer with a compute shader, but for now, we can write an example buffer on the CPU. I want some shapes with curves so that we can make sure the system is working before we start on the compute shaders. So, let's just draw some sinusoids. I'll start with a relatively modest 4096 segments. We'll draw four separate sinusoids at 1024 segments each, spaced evenly along the $x$ axis.
+
+Given a curve parameter $t$, the position of each vertex in strand $s$ is $\mathbf{r}_s(t)=(s, t, \sin t)$. What about the normal and bitangent? We could calculate this 'properly' with the Frenet-Serret formulae, but if you rotate things in your head for a second you may see that, for a sine wave wiggling along the $y$ axis, the bitangent is always going to be $\mathbf{B}(t)=(-1, 0, 0)$. The normal vector is slightly more tricky. It's easier to start with the tangent vector, which is defined by
+
+$$
+\mathbf{T}(t) = \frac{\mathbf{r}'(t)}{\lvert \mathbf{r}'(t)\rvert}
+$$
+
+and in our case,
+
+$$\mathbf{T}(t)=\frac{1}{\sqrt{1+\cos^2 t}}(0, 1, \cos t)$$
+
+So the normal vector must be...
+
+$$\mathbf{N}=\mathbf{T}\times\mathbf{B}=\frac{1}{\sqrt{1+\cos^2 t}}\begin{pmatrix}0 \\ -\cos t \\ 1)$$
+
+But we can skip the normalisation factor and just call `normalize()`.
+
+```rust
+const SEGMENTS: usize = 4096;
+
+fn create_sinusoid_instances(device: &wgpu::Device) -> wgpu::Buffer {
+    const SEGMENTS_PER_STRAND: usize = 1024;
+    let spacing = TAU / (SEGMENTS_PER_STRAND as f32);
+    let instances: [TubeInstance; Self::SEGMENTS] = std::array::from_fn(|i| {
+        let strand = i / SEGMENTS_PER_STRAND;
+        let i = i % SEGMENTS_PER_STRAND;
+        let t = spacing * (i as f32);
+        let t_next = spacing * ((i + 1) as f32);
+
+        TubeInstance {
+            start_position: vec3(strand as f32, t, t.sin()),
+            end_position: vec3(strand as f32, t_next, t_next.sin()),
+            start_bitangent: vec3(-1.0, 0.0, 0.0),
+            end_bitangent: vec3(-1.0, 0.0, 0.0),
+            start_normal: vec3(0.0, -t.cos(), 1.0).normalize(),
+            end_normal: vec3(0.0, -t_next.cos(), 1.0).normalize(),
+            colour: vec3(1.0,1.0,1.0),
+            radius: 0.05,
+        }
+    });
+    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Noodle instance buffer"),
+        contents: bytemuck::cast_slice(&instances),
+        usage: wgpu::BufferUsages::VERTEX,
+    })
+}
+```
+We can call this function and keep the buffer around to pass slices in during rendering.
+
+You might wonder why we have `BufferUsages::Vertex` here, when this is a buffer for instances. The answer is that instance buffers are considered a type of vertex buffer. Earlier on, when we declared our vertex buffer layouts, we specified whether they use `step_mode` of `Instance` or `Vertex`. That's the only difference.
+
+All of this can now be bundled up in a struct which holds handles to all the GPU stuff we might need to use for rendering.
+
+```rust
+pub struct Pipelines {
+    render_pipeline: wgpu::RenderPipeline,
+    bind_group: wgpu::BindGroup,
+    uniform_buffer: wgpu::Buffer,
+    cylinder_vertex_buffer: wgpu::Buffer,
+    instance_buffer: wgpu::Buffer,
+}
+```
+
+## Rendering
+
+We've done a lot of work to draw some simple wiggles, but let's go ahead and actually see it now. To render something in wgpu, you create a render pass, which records a series of commands to execute in series and render some stuff. It's pretty simple, really. Here's the render function:
+
+```rust
+pub fn render(&self, render_pass: &mut wgpu::RenderPass) {
+    render_pass.set_pipeline(&self.render_pipeline);
+    render_pass.set_bind_group(0, &self.bind_group, &[]);
+    render_pass.set_vertex_buffer(0, self.cylinder_vertex_buffer.slice(..));
+    render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
+    render_pass.draw(0..(Self::VERTICES as u32), 0..(Self::SEGMENTS as u32))
+}
+```
+So, in theory, with all that code we can now pass a camera matrix to the uniform buffer and start rendering some wiggles! Here's the outer rendering code, nothing fancy.
+
+```rust
+let centre = vec3(1.5, std::f32::consts::PI, 0.0);
+
+self.pipelines.update_uniforms(
+    &self.queue,
+    centre + vec3(5.0 * elapsed_time.cos(), 5.0 * elapsed_time.sin(), 1.0),
+    centre,
+    self.surface_config.width as f32 / self.surface_config.height as f32,
+);
+
+{
+    let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        label: Some("Render Pass"),
+        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+            view: &view,
+            resolve_target: None,
+            ops: wgpu::Operations {
+                load: wgpu::LoadOp::Clear(wgpu::Color {
+                    r: 0.01,
+                    g: 0.01,
+                    b: 0.014,
+                    a: 1.0,
+                }),
+                store: wgpu::StoreOp::Store,
+            },
+            depth_slice: None,
+        })],
+        depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+            view: &depth_view,
+            depth_ops: Some(wgpu::Operations {
+                load: wgpu::LoadOp::Clear(0.0),
+                store: wgpu::StoreOp::Store,
+            }),
+            stencil_ops: None,
+        }),
+        occlusion_query_set: None,
+        timestamp_writes: None,
+    });
+
+    self.pipelines.render(&mut render_pass);
+}
+```
+Note that because we're using reverse depth, we must clear the depth buffer to zero, not one. Why is the render pass in a block? Well, wgpu automatically writes it to the command buffer when it's dropped.
+
+![A line of four sinusoids in a grey void.](assets/sinusoids.png)
+
+If you've been following along this far, run the program now and you will see four nice smooth sinusoids spinning steadily around the centre of the world!
+
+### Getting this to work on web
+
+Back on [Day 9](https://github.com/MagnusThor/so-you-think-you-can-code-2025/tree/main/day09), Magnus showed how to create a simple WebGPU fullscreen shader running in the browser. As far as I can tell, my implementation of this app is pretty similar. Instead of using `js-sys` I'm using `web-time` to provide a common abstraction between native and web. For some reason, Magnus's demo runs a whole lot better on Firefox than mine. I haven't worked out why yet. If anyone reading this has some insight, I'd be very grateful!
+
+It took a lot of time to find all the small mistakes I'd made, but ultimately it mostly amounted to 'missing something on Learn WGPU'.
+
+There is one wrinkle that needs to be taken care of. On native, we can declare the surface uses an sRGB texture format. On web, the WebGPU spec says that the `GPUCanvasConfiguration` [cannot use sRGB formats](https://www.w3.org/TR/webgpu/#canvas-configuration) such as `Bgra8UnormSrgb`. I'm not sure exactly how that maps to wgpu, but in practice for this or some other reason, when we look for a surface format on web we will only find non-sRGB ones. As a result, our renders will look weirdly dark, because we have not applied the proper [transfer function](https://en.wikipedia.org/wiki/SRGB#Transfer_function_(%22gamma%22)).
+
+```rust
+let surface_format = surface_capabilities
+    .formats
+    .iter()
+    .find(|f| f.is_srgb())
+    .copied()
+    .unwrap_or(surface_capabilities.formats[0]);
+```
+However, on web we can still have an sRGB *view* of a non-sRGB *texture*. To support this, we need to do a few things. First, we need to make sure we've declared that our surface texture supports sRGB views when we create it...
+
+```rust
+let surface_config = wgpu::SurfaceConfiguration {
+    //...
+    format: surface_format,
+    view_formats: vec![surface_format.add_srgb_suffix()],
+    //...
+};
+```
+Then, when we create a texture view to render into, we must create a view with this alternative sRGB view format...
+
+```rust
+let output = self.surface.get_current_texture()?;
+
+let view = output.texture.create_view(&wgpu::TextureViewDescriptor {
+    format: Some(self.surface_config.format.add_srgb_suffix()),
+    ..Default::default()
+});
+```
+On native, `add_srgb_suffix` is a noop. With these changes, both on web and on native you'll get the proper linear->sRGB transfer when writing to the texture.
+
+Right now we're directly rendering onto the surface, but if we wanted to do HDR rendering, post-processing etc. we would probably want to stay in linear float space until the end.
+
+## Boiling our noodles with compute shaders
+
+Having successfully created a renderer for long noodly things, we can get onto the actual main part of this story: rendering divergence-free fields. Phew.
+
+To do this, we're going to need to create a compute pipeline. The process for doing this is actually a bit simpler than creating a render pipeline, but there are some wrinkles to take care of.
+
+Just as we did with the render pipeline, we'll start at the end. We need to fill out this form...
+
+```rust
+let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+    label: (),
+    layout: (),
+    module: (),
+    entry_point: (),
+    compilation_options: (),
+    cache: (),
+});
+```
+The module is where our shader goes. The rest is boilerplate stuff.
+
+### What is a compute shader?
+
+If you've read this far you're likely familiar enough with the usual shaders, but perhaps you're like me and find compute shaders a little mysterious. A vertex shader's job is to take vertex data and put it into clip space and will be invoked once for each vertex, a fragment shader's job is to tell pixels what colour to be and will be invoked once per pixel covered by a triangle (or more with MSAA), but a compute shader can do pretty much anything. What's all this 3D grid stuff about?
+
+Essentially, the compute shaders are fired off in little groups of up to around 256 invocations (or more, depending on your device, but 256 is guaranteed by wgpu). The workgroups are indexed on a 3D grid, and within each workgroup, the invocations are also indexed on a 3D grid. You are basically free to arrange that how you want, e.g. if you just want a linear array index you can put them all in a long line, but if you're working on 2D or 3D data you can cut them up some other way.
+
+OK, but what happens then? Where does the return value of the compute shader *go*? Well, they can essentially read and write arbitrarily to 'Storage' buffers.
+
+But hold on, you might say, doesn't that mean huge race conditions if two invocations of the shader write to the same place? Yep, it absolutely means that! To deal with that, if your shaders might read and write to the same place, you can use [atomic types](https://www.w3.org/TR/WGSL/#atomic-types).
+
+### A compute shader to draw lines
+
+Let's start with 
