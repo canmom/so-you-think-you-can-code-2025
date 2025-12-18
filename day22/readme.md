@@ -1221,12 +1221,16 @@ fn create_instances(
     }
 }
 ```
-I chose to colour the strands with a simple black to white gradient, but you may prefer to shade them differently.
+At each step, we simply sample the noise to figure out where to go next, and write down the normal and binormal. I chose to colour the strands with a simple black to white gradient, but you may prefer to shade them differently.
 
 Now for the result...
 
 ![A complex spiraling shape made of white strands](assets/realtime-uzumaki.png)
 
 I adjusted the camera positioning to give it a lissajous motion that flies you in and out of the noodles. You can see it in-browser here (todo: upload the web build).
+
+It's not quite perfect. I'm not sure what causes the sharp discontinuities in gradient. There are sometimes twisting artefacts, resulting from how I'm calculating the normal and bitangent. Nevertheless, we can easily have a thousand twisting noodles, and this is really only the beginning of what you can do with this kind of effect. I find it downright hypnotic.
+
+Stare into the noodles, my friend. And make something cool with compute shaders.
 
 (If there's time before this goes live, I'd like to add some controls over the parameters and let people explore the space of this effect some more, and maybe solve the planar discontinuities. This is probably enough to be going with though!)
