@@ -6,7 +6,7 @@ On creating complex, swirly noodle shapes with compute shaders in Rust and wgpu.
 
 ## What are we trying to do here?
 
-Well the short answer is that we're gonna make [this](https://github.com/canmom/so-you-think-you-can-code-2025/tree/main/day20). The long answer follows...
+Well the short answer is that we're gonna make [this](https://canmom.art/noodles/). The long answer follows...
 
 Have a look at this image.
 
