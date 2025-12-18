@@ -8,6 +8,8 @@ local Config = require(script.Parent.Config)
 local World = require(script.Parent.World)
 local Utility = require(script.Parent.Utility)
 
+local MengerSponge = require(script.Parent.MengerSponge) 
+
 local TERRAIN_RES = Config.TERRAIN_RES
 local TERRAIN_SIZE = Config.TERRAIN_SIZE
 local HEIGHT_SCALE = Config.HEIGHT_SCALE
@@ -111,10 +113,85 @@ function WorldGenerator.generateCaves()
     end
 end
 
+
+
+function WorldGenerator.placeMengerBuilding()
+    print("🏙️ Finding a valley for the Menger building...")
+    
+    local bestPos = nil
+    local lowestY = math.huge
+    local searchRange = Config.TERRAIN_SIZE * 0.5
+    
+    -- Sample 20 random points to find a valley
+    for i = 1, 20 do
+        local rx = math.random(-searchRange, searchRange)
+        local rz = math.random(-searchRange, searchRange)
+        
+        if Utility.isLocationFlat(rx, rz) then
+            local y = Utility.getGroundY(rx, rz)
+            if y < lowestY then
+                lowestY = y
+                bestPos = Vector3.new(rx, y, rz)
+            end
+        end
+    end
+
+    if bestPos then
+        local buildingSize = 81 -- Works well with powers of 3 (3^4)
+        local foundationSize = Vector3.new(buildingSize + 10, 10, buildingSize + 10)
+        
+        -- 1. Flatten the area (Subtractive: fill with Air, then add a Concrete Slab)
+        game.Workspace.Terrain:FillBlock(
+            CFrame.new(bestPos + Vector3.new(0, 20, 0)), 
+            Vector3.new(foundationSize.X, 40, foundationSize.Z), 
+            Enum.Material.Air
+        )
+        
+        game.Workspace.Terrain:FillBlock(
+            CFrame.new(bestPos), 
+            foundationSize, 
+            Enum.Material.Concrete
+        )
+
+    
+        local spongeCenter = bestPos + Vector3.new(0, buildingSize/2, 0)
+    
+        
+     
+        MengerSponge.generate(spongeCenter, buildingSize, 3)
+        print("✅ Menger Building complete at: ", bestPos)
+    end
+end
+
+function WorldGenerator.removeJaggies()
+    print("🧹 Starting final, aggressive debris cleanup pass (Y=" .. CARVING_TOP_Y .. " and up)...")
+
+ 
+    local CLEANUP_SIZE_X = TERRAIN_SIZE * 2 + 200
+    local CLEANUP_SIZE_Z = TERRAIN_SIZE * 2 + 200
+    
+    local CLEANUP_BOTTOM_Y = CARVING_TOP_Y
+    local CLEANUP_TOP_Y = 500 
+    
+
+    local CLEANUP_HEIGHT = CLEANUP_TOP_Y - CLEANUP_BOTTOM_Y
+    local CLEANUP_CENTER_Y = CLEANUP_BOTTOM_Y + (CLEANUP_HEIGHT / 2)
+    
+    local CLEANUP_CENTER_POS = Vector3.new(0, CLEANUP_CENTER_Y, 0)
+    local CLEANUP_SIZE = Vector3.new(CLEANUP_SIZE_X, CLEANUP_HEIGHT, CLEANUP_SIZE_Z)
+    
+   
+    Terrain:FillBlock(CFrame.new(CLEANUP_CENTER_POS), CLEANUP_SIZE, Enum.Material.Air)
+    
+    print("✅ Final debris cleanup complete. Volume carved from Y=" .. CARVING_TOP_Y .. " to Y=" .. CLEANUP_TOP_Y .. ".")
+end
+
 function WorldGenerator.generateWorld()
     WorldGenerator.generateTerrain()
     WorldGenerator.generateBoundaryWalls()
     WorldGenerator.generateCaves()
+    WorldGenerator.placeMengerBuilding()
+    WorldGenerator.removeJaggies()
 end
 
 return WorldGenerator
