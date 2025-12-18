@@ -1,6 +1,6 @@
 # Day 22: A Nest of Divergence-Free Fields
 
-On creating complex, swirly shapes with compute shaders in Rust and wgpu.
+On creating complex, swirly noodle shapes with compute shaders in Rust and wgpu.
 
 > Absolutely no AI was used.
 
@@ -576,13 +576,13 @@ $$
 \mathbf{T}(t) = \frac{\mathbf{r}'(t)}{\lvert \mathbf{r}'(t)\rvert}
 $$
 
-and in our case,
+so in our case,
 
-$$\mathbf{T}(t)=\frac{1}{\sqrt{1+\cos^2 t}}(0, 1, \cos t)$$
+$$\mathbf{T}(t)=\frac{1}{\sqrt{1+\cos^2 t}}\begin{pmatrix}0, 1, \cos t\end{pmatrix}$$
 
 So the normal vector must be...
 
-$$\mathbf{N}=\mathbf{T}\times\mathbf{B}=\frac{1}{\sqrt{1+\cos^2 t}}\begin{pmatrix}0 \\ -\cos t \\ 1)$$
+$$\mathbf{N}=\mathbf{T}\times\mathbf{B}=\frac{1}{\sqrt{1+\cos^2 t}}\begin{pmatrix}0 \\ -\cos t \\ 1\end{pmatrix}$$
 
 But we can skip the normalisation factor and just call `normalize()`.
 
@@ -757,14 +757,189 @@ The module is where our shader goes. The rest is boilerplate stuff.
 
 ### What is a compute shader?
 
-If you've read this far you're likely familiar enough with the usual shaders, but perhaps you're like me and find compute shaders a little mysterious. A vertex shader's job is to take vertex data and put it into clip space and will be invoked once for each vertex, a fragment shader's job is to tell pixels what colour to be and will be invoked once per pixel covered by a triangle (or more with MSAA), but a compute shader can do pretty much anything. What's all this 3D grid stuff about?
+If you've read this far you're likely familiar enough with the usual shaders, but perhaps you're like me and find compute shaders a little mysterious. A vertex shader's most important job is to take vertex data and put it into clip space and it will be invoked once for each vertex. A fragment shader's main job is to tell pixels what colour to be, and it will be invoked once per pixel covered by a triangle (or more with MSAA). Of course, you can do other stuff with them too, but that is a pretty clear place to start.
+
+But a compute shader can do pretty much anything, which might you feeling a bit lost. And if you look into it, well, what's all this 3D grid stuff about? How do you decide how many things go in your grid?
 
 Essentially, the compute shaders are fired off in little groups of up to around 256 invocations (or more, depending on your device, but 256 is guaranteed by wgpu). The workgroups are indexed on a 3D grid, and within each workgroup, the invocations are also indexed on a 3D grid. You are basically free to arrange that how you want, e.g. if you just want a linear array index you can put them all in a long line, but if you're working on 2D or 3D data you can cut them up some other way.
 
-OK, but what happens then? Where does the return value of the compute shader *go*? Well, they can essentially read and write arbitrarily to 'Storage' buffers.
+OK, but what happens then? Where does the return value of the compute shader *go*? Well, they can essentially read and write arbitrarily to 'Storage' buffers, which you feed in using a bind group.
 
-But hold on, you might say, doesn't that mean huge race conditions if two invocations of the shader write to the same place? Yep, it absolutely means that! To deal with that, if your shaders might read and write to the same place, you can use [atomic types](https://www.w3.org/TR/WGSL/#atomic-types).
+But hold on, you might say, doesn't that mean huge race conditions if two, ten or a thousand invocations of the shader write to the same place? Yep, it absolutely means that! To deal with that, if your shaders might read and write to the same place, you can use [atomic types](https://www.w3.org/TR/WGSL/#atomic-types) and [atomic functions](https://www.w3.org/TR/WGSL/#atomic-builtin-functions). For example, you could use `atomicMin` to find the minimum of all the atomic operations, or `atomicAdd` to add up a bunch of stuff.
 
-### A compute shader to draw lines
+You can also use barriers to synchronise groups of threads. `workgroupBarrier` and `storageBarrier` can keep threads waiting until the other threads catch up, which can be useful for certain types of algorithm like [sorting](https://sotrh.github.io/learn-wgpu/compute/sorting/#race-conditions-and-barriers).
 
-Let's start with 
+So, in short: if vertex and fragment shaders are most of the time pure functions (notwithstanding that fragment shaders can *also* write to buffers with atomics), compute shaders give you the full chaos of parallel programming but also the tools to handle it.
+
+I'm only beginning to get to grips with what compute shaders can do, so I hope you can forgive this long explanation!
+
+### Getting some help from the weasel
+
+We will want to use the same definition of our `Instance` struct in both shaders. Since the shaders use different bindings, we can't simply put them all in the same file. A clunky way to handle this is to write some sort of `common.wgsl` and glue it to the beginning of each shader at compile time. That's what I've been doing until now, and I don't like it.
+
+An alternative is being built by the community in the form of [WESL](https://wesl-lang.dev/), which adds some much-needed features to WGSL like includes. So, let's add WESL to our build-dependencies in the project's `Cargo.toml` (and also dependencies, so we can use the `include_wesl` macro).
+
+```toml
+[build-dependencies]
+wesl = "0.3.1"
+```
+Now, we can run the WESL build script at compile time to transpile into standard WGSL. Instead of `include_str!` we can use `include_wesl!`. To make this happen we must also create a [`build.rs`](https://doc.rust-lang.org/cargo/reference/build-scripts.html) at the root of the package. For me, that looks like this:
+
+```rust
+use wesl::Wesl;
+
+fn main() {
+    let wesl = Wesl::new("src/shaders");
+    wesl.build_artifact(&"package::tube".parse().unwrap(), "tube");
+    wesl.build_artifact(&"package::instances".parse().unwrap(), "instances");
+}
+```
+and then I can replace `include_str!("shaders/tube.wgsl")` with `include_wesl!("tube")`.
+
+How does our new import statement work? This took a little getting used to. At time of writing, it seems kind of finicky. For example, this is a valid shader which compiles...
+
+```wesl
+import package::types::Instance;
+
+@group(0) @binding(0) var<storage, read_write> instances: array<Instance>;
+
+@compute
+@workgroup_size(16,16,1)
+fn create_instances(
+    @builtin(global_invocation_id) id: vec3<u32>
+) {
+    instances[id.x * 1024 + id.y] = Instance();
+}
+```
+However, if I comment out the line which actually interact with instances...
+```wesl
+import package::types::Instance;
+
+@group(0) @binding(0) var<storage, read_write> instances: array<Instance>;
+
+@compute
+@workgroup_size(16,16,1)
+fn create_instances(
+    @builtin(global_invocation_id) id: vec3<u32>
+) {
+    // instances[id.x * 1024 + id.y] = Instance();
+}
+```
+to make a 'do nothing' shader, when I try to compile the build script complains:
+
+> could not find declaration for ident package::types::Instance
+
+Does this mean you can't import something you don't actually use? Or is it that the empty compute shader is invalid? I'm not sure, at time of writing.
+
+Work is currently ongoing to integrate WESL import support into [WGSL Analyzer](https://github.com/wgsl-analyzer/wgsl-analyzer/pull/700). Unfortunately, at time of writing, that is not present so the language server will get upset when you refactor into WESL.
+
+### Drawing some circles
+
+Before we implement the divergence-free fields, let's start with something very simple to get to grips with the idea of compute: a bunch of concentric circles.
+
+Essentially, we will be following very similar logic to what we did above in drawing the sinusoids, but now we'll be constructing the buffer on the GPU. What fun.
+
+It seems that storage buffers in WGSL are inherently one-dimensional. To figure out indicies, you have various [provided builtins](https://www.w3.org/TR/webgpu/#computing-operations). You can get `local_invocation_index` within the shader. The workgroup size itself can't be accessed with a builtin but since you defined it in the shader, you have it anyway.
+
+What happens if we try to read or write out of bounds of an array? [A few things, most of them bad](https://www.w3.org/TR/WGSL/#out-of-bounds-access-sec). If we're lucky, the invocation simply dies and outputs zeroes. For loads and stores, weird stuff can happen, including writing to random places. Also if there's a barrier it might 'hang the shader', which sounds real bad. So we'd better be pretty careful not to do that.
+
+But let's assume we have a sufficiently large storage buffer. In this case, we could have each invocation write one instance and exit. However, later we'll want to follow field lines, and since each segment depends on the previous segment's position, we'll need to write a whole series of instances in one invocation. Essentially, each compute shader will 'own' a single noodle.
+
+### Figuring out the invocation size
+
+Since that's the ultimate plan, I'll follow a similar design here. Let's draw a bunch of concentric rings. Each ring will be the same length, shall we say 32 segments long. So each invocation must write 32 segments.
+
+We need to convert each invocation's global invocation ID into an index into the storage buffer. So the stride per invocation is 64. Unfortunately, we don't get a `global_invocation_index` builtin. However, if we let each workgroup get its own block of the storage buffer, we can just use the `local_invocation_index`.
+
+So how big is a workgroup? Apparently [GPUs tend to operate](https://computergraphics.stackexchange.com/questions/12462/compute-shader-workgroups-execution-and-size) in 'waves' (AMD) of 64 threads or 'warps' (nVidia) of 32 threads, the workgroup size should ideally be a multiple of 64 so it can be evenly split between them.
+
+Let's launch our compute shaders on a $16\times16$ square patch. So there are 256 invocations in a warp and each one is writing 32 instances which means the stride per workgroup is $256\times32=8192$ instances, meaning we'll ultimately be drawing $8192\times16=131,072$ triangles for each workgroup. And with each instance weighing 88 bytes, our buffer will need 720kB of storage per workgroup.
+
+So, let's start by figuring out suitable linear indices within the shader. We're using the global ID to locate us in a 2D grid, and we don't really care about how many workgroups there are.
+
+```wgsl
+@group(0) @binding(0) var<storage, read_write> instances: array<Instance>;
+
+@compute
+@workgroup_size(16,16,1)
+fn create_instances(
+    @builtin(global_invocation_id) gid: vec3<u32>,
+    @builtin(num_workgroups) num_workgroups: vec3<u32>,
+) {
+    let workgroup_grid_size = num_workgroups * vec3(16,16,1);
+    let global_invocation_index =
+        workgroup_grid_size.y * workgroup_grid_size.x * gid.z
+        + workgroup_grid_size.x * gid.y
+        + gid.x;
+    for (var i = 0; i < 256; i++) {
+        instances[256 * (global_invocation_index) + i] = Instance();
+    }
+}
+```
+Now we just need to populate those instances. Let's say that the radius of our circle will be defined by the `gid.x` and the height along the z axis will be defined by the `gid.y`. Now we need to calculate the same stuff we did before: start and end positions, plus tangent and bitangent. Luckily, for a circle, that's super easy. Here we go:
+
+```wgsl
+const tau = radians(360.0);
+
+@compute
+@workgroup_size(16,16,1)
+fn create_instances(
+    @builtin(global_invocation_id) gid: vec3<u32>,
+    @builtin(num_workgroups) num_workgroups: vec3<u32>,
+) {
+    let workgroup_grid_size = num_workgroups * vec3(16,16,1);
+    let global_invocation_index =
+        workgroup_grid_size.y * workgroup_grid_size.x * gid.z
+        + workgroup_grid_size.x * gid.y
+        + gid.x;
+    let radius = f32(gid.x) * 0.1;
+    let height = f32(gid.y) * 0.1;
+    var end_position = vec3(radius, 0.0, height);
+    var end_normal = vec3(-1.0, 0.0, 0.0);
+    let bitangent = vec3(0.0,0.0,1.0);
+    let tube_radius = 0.02;
+    for (var i : u32 = 0; i < 256; i++) {
+        let start_position = end_position;
+        let start_normal = end_normal;
+        let t = f32(i+1)/256.0;
+        let cos_sin = vec2(cos(t*tau), sin(t*tau));
+        end_position = vec3(radius * cos_sin, height);
+        end_normal = vec3(-cos_sin, 0.0);
+
+        let colour = vec3(t,1.0-t,1.0);
+
+        instances[256 * (global_invocation_index) + i] =
+            Instance(
+                start_position,
+                start_normal,
+                bitangent,
+                end_position,
+                end_normal,
+                bitangent,
+                colour,
+                tube_radius,
+            );
+    }
+}
+```
+In this case, of course a lot of the data in our instances is redundant, and we could stand to move it into uniforms. I made the colour vary around each circle to make it clearer what the compute shaders are doing.
+
+Let's set up the pipeline and launch it. First we must define some constants to know how big things are. I'll go for two workgroups to begin with...
+
+```rust
+const STRANDS: UVec3 = uvec3(32, 16, 1);
+const NUM_STRANDS: usize =
+    Self::STRANDS.x as usize * Self::STRANDS.y as usize * Self::STRANDS.z as usize;
+const SEGMENTS_PER_STRAND: usize = 256;
+const SEGMENTS: usize = Self::NUM_STRANDS * Self::SEGMENTS_PER_STRAND;
+```
+The instance buffer must be allocated to be big enough to contain all the segment instances. We also need to tell wgpu that we intend to use it as both a storage and vertex buffer.
+
+```rust
+let instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+    label: Some("Noodle instance buffer"),
+    size: (std::mem::size_of::<TubeInstance>() * Self::NUM_STRANDS * 256) as u64,
+    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::VERTEX,
+    mapped_at_creation: false,
+});
+```
