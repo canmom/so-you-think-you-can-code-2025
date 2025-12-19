@@ -1237,7 +1237,7 @@ Now for the result...
 
 ![A complex spiraling shape made of white strands](assets/realtime-uzumaki.png)
 
-I adjusted the camera positioning to give it a lissajous motion that flies you in and out of the noodles. You can see it in-browser [here](https://canmom.art/noodles).
+I adjusted the camera positioning to give it a lissajous motion that flies you in and out of the noodles. You can see it in-browser [here](https://canmom.art/noodles). The full source code is available [here](https://github.com/canmom/noodles) if you would like to compile it natively.
 
 OK, is this finished? Not exactly. I'm not sure what causes the sharp discontinuities in gradient. There are sometimes twisting artefacts, resulting from how I'm calculating the normal and bitangent.
 
