@@ -71,7 +71,7 @@ If you prefer not to use Git or GitHub, you can **always email or contact us** (
 | **December 17** | Benni Dibb| [Recreating a Hit Song on an 8-Bit Sound Chip](day17/readme.md) | 🎅 Open |
 | **December 18** | Starfighter | [​The Recursive Swedish Sphere Algorithm](day18/readme.md) | 🎅 Open |
 | **December 19** | Frank Taylor | [Markov Melody Machine](day19/readme.md) | 🎅 Open |
-| **December 20** | [canmom](https://github.com/canmom)| A Nest of Divergence-Free Fields | 🔒 Claimed |
+| **December 20** | [canmom](https://github.com/canmom)| [A Nest of Divergence-Free Fields](day20/readme.md) | 🎅 Open |
 | **December 21** | Magnus Thor | Ray Marching Complex Life into a WebGPU Fragment Shader | 🔒 Claimed |
 | **December 22** | Starfighter | 🔒 The WebGPU MultiPass Pattern: A Framework for Implementing GPU-Accelerated Algorithms |
 | **December 23** | [Mårten 'mrange' Rånge](https://github.com/mrange/) | TBA | 🔒 Claimed |
