@@ -72,9 +72,9 @@ If you prefer not to use Git or GitHub, you can **always email or contact us** (
 | **December 18** | Starfighter | [​The Recursive Swedish Sphere Algorithm](day18/readme.md) | 🎅 Open |
 | **December 19** | Frank Taylor | [Markov Melody Machine](day19/readme.md) | 🎅 Open |
 | **December 20** | [canmom](https://github.com/canmom)| [A Nest of Divergence-Free Fields](day20/readme.md) | 🎅 Open |
-| **December 21** | Coop  | [A Generic Sequencer for JS/TS and GLSL](day21/readme.md) | 🎅 Open
-| **December 22** | Ricky Davies | [Multi-Window Synchronization with Broadcast Channel API](day22/readme.md) | 🔒 Claimed |
-| **December 23** | [Mårten 'mrange' Rånge](https://github.com/mrange/) | TBA | 🔒 Claimed |
+| **December 21** | Coop  | [A Generic Sequencer for JS/TS and GLSL](day21/readme.md) | 🎅 Open |
+| **December 22** | Ricky Davies | [Multi-Window Synchronization with Broadcast Channel API](day22/readme.md) | 🎅 Open  |
+| **December 23** | [Mårten 'mrange' Rånge](https://github.com/mrange/) | [Coding Like It's 1984 Again](day23/readme.md) | 🎅 Open |
 | **December 24** | Magnus Thor | Ray Marching Complex Life into a WebGPU Fragment Shader| TBA | 🔒 Claimed |
 | **December 25** | Hakko | TBA | 🔒 Claimed |
 
